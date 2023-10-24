@@ -1,8 +1,26 @@
 import requests
-import json
+#import json
 import datetime
 
 
+def check_timeframe(news_list, lookback_days):
+    """ 
+    Check if the news articles are within the timeframe.    
+    Args:
+        news_list (list): A list of news articles represented as dictionaries.
+        lookback_days (int): The number of days to look back for news articles.
+    Returns:
+        bool: True if all news articles are within the timeframe, False otherwise.
+    """ 
+    # Calculate the dates
+    today = datetime.date.today()
+    lookback_date = today - datetime.timedelta(days=lookback_days)
+    # Check if the dates are valid
+    for article in news_list:
+        article_date = datetime.datetime.strptime(article['publishedAt'], "%Y-%m-%dT%H:%M:%SZ").date()
+        if article_date < lookback_date:
+            return False
+    return True
 
 def fetch_latest_news(api_key, news_keywords, lookback_days=10):
     """
@@ -20,18 +38,21 @@ def fetch_latest_news(api_key, news_keywords, lookback_days=10):
     if not news_keywords.isalpha():
         print("Please enter a valid keyword")
         return []
-    # Calculate the date 'lookback_days' ago from the current date
+    
+    # Calculate the dates
     today = datetime.date.today()
     lookback_date = today - datetime.timedelta(days=lookback_days)
-
-    # Format dates in ISO 8601 format (YYYY-MM-DD)
+    # Convert the dates to strings
     today_str = today.strftime("%Y-%m-%d")
     lookback_date_str = lookback_date.strftime("%Y-%m-%d")
-
-    # Make the request to NewsAPI
+    # Fetch the news
     url = f"https://newsapi.org/v2/everything?q={news_keywords}&from={lookback_date_str}&to={today_str}&sortBy=popularity&apiKey={api_key}"
     response = requests.get(url)
-    
+    # Check if the timeframe is valid
+    if not check_timeframe(response.json().get('articles', []), lookback_days):
+        print("Please enter a valid timeframe")
+        return []
+    # Check if the response is valid
     if response.status_code == 200:
         response_json = response.json()
         articles = response_json.get('articles', [])
